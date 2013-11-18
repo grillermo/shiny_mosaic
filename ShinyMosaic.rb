@@ -203,9 +203,6 @@ class Shinymosaic
     end
   end
 
-  def find_sub_rectangle(rectangle)
-  end
-
   def find_neighbour_with_coordinates(coordinates)
     @parent_rectangle.find_sub_rectangle_with_coordinates(coordinates)
   end
@@ -295,11 +292,6 @@ class Shinymosaic
     return false
   end
 
-  def select_random_sub_rectangle
-    @sub_rectangles.sample
-  end
-
-
   def neighbours
     {:right => self.find_with_direction(:right),
      :left => self.find_with_direction(:left),
@@ -308,6 +300,7 @@ class Shinymosaic
   end
 
   def unique_neighbours
+    # Filters non existent neighbours and duplicates
     result = {}
     self.neighbours.each do |direction,findings|
       next if !findings
@@ -324,10 +317,12 @@ class Shinymosaic
   end
 
   def left
+    # This is the css left property for using with position: absolute
     @corners[:top][:left][:y] * parent_rectangle.cell_width
   end
 
   def top
+    # This is the css top property for using with position: absolute
     @corners[:top][:left][:x] *  parent_rectangle.cell_height
   end
 
@@ -348,7 +343,6 @@ class Shinymosaic
   end
 
 end
-
 
 
 
