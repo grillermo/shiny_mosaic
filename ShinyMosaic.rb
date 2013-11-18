@@ -1,26 +1,10 @@
 
 class Shinymosaic
-  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles, :sizes, :space_left, :cell_width, :cell_height, :objects, :object
-  @@sizes = [{:small => {:width => 1, :height => 1, :content => 'A'}},
-             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}},
-  ]
+  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles, :space_left, :cell_width, :cell_height, :objects, :object
 
   def initialize(objects: [],width: 1, height: 1, cell_width: 1, cell_height: 1, content: 0, object: nil)
     @objects = objects
     @object = object
-    @sizes = @@sizes
     @cell_width = cell_width
     @cell_height = cell_height
     @width = width / cell_width
@@ -48,25 +32,21 @@ class Shinymosaic
     @grid = self.build_grid
     @space_left = calculate_space_left
     while @space_left != 0
-      object = @objects.pop
-      size = @@sizes.sample
-      rectangle = Shinymosaic.new(objects: [],width: size.values[0][:width],height: size.values[0][:height], object: object)
-      rectangle.content = size.values[0][:content]
+      object = @objects.to_a.sample
+      width = object.width
+      height = object.height
+      content = object.content
+      rectangle = Shinymosaic.new(objects: [],width: width,height: height, content: content,object: object)
       self.insert_rectangle(rectangle)
     end
-    self.render
   end
 
   def tiles
     @sub_rectangles
   end
 
-  def photo
-    @object.photo
-  end
-
-  def photo_placeholder
-    "http://lorempixel.com/#{self.width_in_pixels}/#{self.height_in_pixels}/"
+  def photo_url
+    @object.photo_url
   end
 
   def id
