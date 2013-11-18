@@ -1,8 +1,11 @@
 
 class Rectangle
-  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles
+  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles, :size, :sizes
+  @@sizes = ['small','vertical','large']
 
-  def initialize(width: 1, height: 1, cell_width: 1, cell_height: 1, content: 0)
+  def initialize(width: 1, height: 1, cell_width: 1, cell_height: 1, content: 0, size: @@sizes.sample)
+    @sizes = @@sizes
+    @size = size
     @width = width / cell_width
     @height = height / cell_height
     @content = content
@@ -11,7 +14,7 @@ class Rectangle
                 }
     @sub_rectangles = []
     @parent_rectangle = nil
-    if @width != 1 && @height != 1
+    if @width > 1 && @height > 1
       @grid = self.build_grid
     end
   end
@@ -161,9 +164,16 @@ class Rectangle
   def find_sub_rectangle(rectangle)
   end
 
+  def find_neighbour_with_coordinates(coordinates)
+    @parent_rectangle.find_sub_rectangle_with_coordinates(coordinates)
+  end
+
   def find_sub_rectangle_with_coordinates(coordinates)
-    @sub_rectangles.each_with_index do |rectangle,i|
-      if rectangle.corners[:top][:left][:y] == coordinates[:x] && rectangle.corners[:top][:left][:y] == coordinates[:y]
+    puts "finding #{coordinates}"
+    @sub_rectangles.each do |rectangle|
+      puts rectangle.corners
+      if coordinates[:x] >= rectangle.corners[:top][:left][:x] && coordinates[:y] >= rectangle.corners[:top][:left][:y] &&
+         coordinates[:x] <= rectangle.corners[:bottom][:right][:x] && coordinates[:y] <= rectangle.corners[:bottom][:right][:y]
         return rectangle
       end
     end
@@ -199,22 +209,92 @@ class Rectangle
   end
 
   # Methods used to mutate the sub rectangle contents
-  def split?
+  def grow?
     # 50 % chance of splitting
     [true,false].sample
   end
 
-  def next_step
-    if split?
-
+  def next_size
+    if grow?
+      case @size
+        when 'small'
+          return 'vertical'
+        when 'vertical'
+          return 'large'
+        when 'large'
+          return 'small'
+      end
+    else
+      case @size
+        when 'small'
+          return 'large'
+        when 'vertical'
+          return 'small'
+        when 'large'
+          return 'vertical'
+      end
     end
   end
 
+  def test_limit(direction)
+  # A test to see if the limit of the parent rectangle is on that direction
+    case direction
+      when 'top'
+        if @corners[:top][:left][:x] == 0
+          return true
+        end
+      when 'bottom'
+        if @corners[:bottom][:left][:x] == @parent_rectangle.height - 1 # compensating for zero based
+          return true
+        end
+      when 'left'
+        if @corners[:bottom][:left][:y] == 0
+          return true
+        end
+      when 'right'
+        if @corners[:bottom][:right][:y] == @parent_rectangle.width - 1 # compensating for zero based
+          return true
+        end
+    end
+    return false
+  end
+
+  def find_with_direction(direction)
+    # Returns a rectangle depending on the direction
+    # assumes there are no spaces and the other rectangles are perfectly aligned on their edge
+    # the only limits are the container itself
+    if test_limit(direction)
+      return false
+    end
+    case direction
+      when 'top'
+        return find_neighbour_with_coordinates({:x => @corners[:top][:left][:x] - 1, :y => @corners[:top][:left][:y]})
+      when 'bottom'
+        return find_neighbour_with_coordinates({:x => @corners[:bottom][:left][:x] + 1, :y => @corners[:top][:left][:y]})
+      when 'left'
+        return find_neighbour_with_coordinates({:x => @corners[:bottom][:left][:x], :y => @corners[:top][:left][:y] - 1})
+      when 'right'
+        return find_neighbour_with_coordinates({:x => @corners[:bottom][:right][:x], :y => @corners[:top][:right][:y] + 1})
+    end
+    return false
+  end
+
+  def grow_small
+
+  end
+
+  def select_needed_to_change
+  # Depending on the next size it should be
+  # It will try to select other rectangles around it
+  # to fullfill its destiny
+  #  case next_size
+  #  end
+  end
 
 end
 
 
-container = Rectangle.new(width:1024,height:513,cell_height:171,cell_width:256)
+#container = Rectangle.new(width:1024,height:513,cell_height:171,cell_width:256)
 
 
 def demo
@@ -235,13 +315,14 @@ end
 
 def setup_test
   container = Rectangle.new(width:10,height:10)
-  sub_rectangle = Rectangle.new(width: 2, height: 2, content: 'A')
   sub_rectangle2 = Rectangle.new(width: 7, height: 7, content: 'B')
+  sub_rectangle3 = Rectangle.new(width: 10, height: 2, content: 'C')
   sub_rectangle = container.insert_rectangle(sub_rectangle)
-  sub_rectangle = container.insert_rectangle(sub_rectangle2)
+  sub_rectangle2 = container.insert_rectangle(sub_rectangle2)
+  sub_rectangle3 = container.insert_rectangle(sub_rectangle3)
   container.render
   puts "In test setup"
-  yield container, sub_rectangle
+  yield container, sub_rectangle3
 end
 
 def test_insertion
@@ -270,13 +351,45 @@ end
 def test_finding
   setup_test do |container,sub_rectangle|
     if sub_rectangle.has_parent?
-      rectangle = container.find_sub_rectangle_with_coordinates({:x => 0,:y => 0})
+      rectangle = container.find_sub_rectangle_with_coordinates({:x => 8,:y => 2})
       unless rectangle
-        raise 'Could not find with coordinates'
+        raise 'Rectangle in x=2, y=0 not found'
       end
+      puts 'Found, removing it'
       container.remove_sub_rectangle(rectangle)
       container.render
     end
+  end
+end
+
+def test_specie
+  setup_test do |container,sub_rectangle|
+    unless sub_rectangle.sizes.include? sub_rectangle.size
+      raise 'No specie!'
+    end
+    puts sub_rectangle.size
+    puts sub_rectangle.next_size
+  end
+end
+
+
+def test_finding_limits
+  setup_test do |container,sub_rectangle|
+    unless sub_rectangle.test_limit('top')
+      raise 'Top Limit test gone wrong'
+    end
+    unless sub_rectangle.test_limit('left')
+      raise 'Left Limit test gone wrong'
+    end
+  end
+end
+
+def test_find_neighbour
+  setup_test do |container,sub_rectangle|
+    unless sub_rectangle.find_with_direction('top')
+      raise 'Right neighbour test gone wrong'
+    end
+    puts sub_rectangle.find_with_direction('top').content
   end
 end
 
@@ -284,6 +397,7 @@ def test_suit
   test_insertion
   test_removal
   test_finding_with_coordinates
+  test_specie
 end
 
-test_finding
+test_find_neighbour
