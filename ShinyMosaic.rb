@@ -1,14 +1,29 @@
 
-class Rectangle
-  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles, :size, :sizes, :space_left
+class Shinymosaic
+  attr_accessor :width, :height, :content, :corners, :grid, :parent_rectangle, :sub_rectangles, :size, :sizes, :space_left, :cell_width, :cell_height, :objects, :object
   @@sizes = [{:small => {:width => 1, :height => 1, :content => 'A'}},
              {:vertical => {:width => 1, :height => 2, :content => 'B'}},
-             {:large => {:width => 2, :height => 2, :content => 'C'}}
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
+             {:vertical => {:width => 1, :height => 2, :content => 'B'}},
+             {:large => {:width => 2, :height => 2, :content => 'C'}},
   ]
 
-  def initialize(width: 1, height: 1, cell_width: 1, cell_height: 1, content: 0, size: size)
+  def initialize(objects: [],width: 1, height: 1, cell_width: 1, cell_height: 1, content: 0, size: size, object: nil)
+    @objects = objects
+    @object = object
     @sizes = @@sizes
     @size = size
+    @cell_width = cell_width
+    @cell_height = cell_height
     @width = width / cell_width
     @height = height / cell_height
     @content = content
@@ -21,6 +36,47 @@ class Rectangle
     if @width > 1 && @height > 1
       @grid = self.build_grid
     end
+  end
+
+  def self.create(objects: [],width: 1280, height: 513, cell_height: 171, cell_width: 256)
+    container = Shinymosaic.new(objects: objects, width: width,height:height,cell_height:cell_height,cell_width:cell_width)
+    container.mutate_layout
+    return container
+  end
+
+  def mutate_layout
+    @sub_rectangles = []
+    @grid = self.build_grid
+    @space_left = calculate_space_left
+    while @space_left != 0
+      object = @objects.pop
+      if @Objects
+
+      else
+        size = @@sizes.sample
+
+      end
+      rectangle = Shinymosaic.new(objects: [],width: size.values[0][:width],height: size.values[0][:height], size: size.keys[0], object: object)
+      rectangle.content = size.values[0][:content]
+      self.insert_rectangle(rectangle)
+    end
+    self.render
+  end
+
+  def tiles
+    @sub_rectangles
+  end
+
+  def photo
+    @object.photo
+  end
+
+  def photo_placeholder
+    "http://lorempixel.com/#{self.width_in_pixels}/#{self.height_in_pixels}/"
+  end
+
+  def id
+    self.object_id
   end
 
   def calculate_space_left
@@ -44,7 +100,7 @@ class Rectangle
     (1..@height).each do |x|
       row = []
       (1..@width).each do |y|
-        row.push Rectangle.new(content: @content)
+        row.push Shinymosaic.new(content: @content)
       end
       grid.push row
     end
@@ -57,9 +113,8 @@ class Rectangle
     available_height = 0
 
     # We need the limits with +1 because the coordinates are 0 based and the widths are not
-    ending_row = starting_row + (rectangle.height - 1)
+    ending_row = starting_row + (rectangle.height)
     left_y_corner = right_y_corner - (rectangle.width - 1)
-
 
     # We asume there is at least one row available because thats where we tested the width
     height_available = 1
@@ -71,29 +126,28 @@ class Rectangle
     clean_rows = 0
     x = 0
     y = 0
-    for row in @grid do
-      if x >= starting_row && x <= ending_row
+    for row in @grid[starting_row..ending_row] do
         # we are on the rows that could have enough space
         y = 0
-        for cell in row do
-          # Flag to determine if this row has enough space
-          row_clean = false
-          if y >= left_y_corner && y <= right_y_corner
-            # We are on the cell that could have enough space
-            if cell.empty
-              # so this row has as least one cell with content
-              row_clean = true
-            end
-          end
-          if row_clean
-            clean_rows += 1
-          end
-          if clean_rows >= rectangle.height
-              return true
+        # Flag to determine if this row has enough space
+        row_clean = false
+        for cell in row[left_y_corner..right_y_corner] do
+          # We are on the cell that could have enough space
+          if cell.empty
+            # so this row has as least one cell with content
+            row_clean = true
+          else
+            clean_rows = 0
+            row_clean = false
           end
           y += 1
         end
-      end
+        if row_clean
+          clean_rows += 1
+        end
+        if clean_rows >= rectangle.height
+          return true
+        end
       x += 1
     end
     return false
@@ -151,7 +205,7 @@ class Rectangle
   end
 
   def build_and_insert_rectangle(width: 1, height: 1, content: '1', size: nil)
-    rectangle = Rectangle.new(width: width, height: height, content: content, size: size)
+    rectangle = Shinymosaic.new(width: width, height: height, content: content, size: size)
     return self.insert_rectangle(rectangle)
   end
 
@@ -295,18 +349,6 @@ class Rectangle
     return false
   end
 
-  def grow_small
-
-  end
-
-  def select_needed_to_change
-  # Depending on the next size it should be
-  # It will try to select other rectangles around it
-  # to fullfill its destiny
-  #  case next_size
-  #  end
-  end
-
   def select_random_sub_rectangle
     @sub_rectangles.sample
   end
@@ -335,38 +377,28 @@ class Rectangle
     return result
   end
 
-  #def mutate_small
-  #  findings = {}
-  #  self.unique_neighbours.each do |direction,neighbours|
-  #    neighbours.each do |neighbour|
-  #      if findings[:top] && findings[:top].size == :small
-  #        smalls_to_vertical(bottom: self,top: neighbour)
-  #      end
-  #      if findings[:bottom] && findings[:bottom].size == :small
-  #        smalls_to_vertical(bottom:neighbour, top: self)
-  #      end
-  #    end
-  #  end
-  #  return false
-  #end
+  def left
+    @corners[:top][:left][:y] * parent_rectangle.cell_width
+  end
 
-  #def smalls_to_vertical(bottom,top)
-  #  self.remove_sub_rectangle(bottom)
-  #  self.remove_sub_rectangle(top)
-  #  self.build_and_insert_rectangle(width: bottom.width, heigh: bottom.height * 2, content: 'C', size: :vertical)
-  #end
+  def top
+    @corners[:top][:left][:x] *  parent_rectangle.cell_height
+  end
 
-  def mutate_layout
-    @sub_rectangles = []
-    @grid = self.build_grid
-    @space_left = calculate_space_left
-    while @space_left != 0
-      size = @@sizes.sample
-      rectangle = Rectangle.new(width: size.values[0][:width],height: size.values[0][:height], size: size.keys[0])
-      rectangle.content = size.values[0][:content]
-      self.insert_rectangle(rectangle)
+  def width_in_pixels
+    width = @width * parent_rectangle.cell_width
+    if width == 0
+      width = parent_rectangle.cell_width
     end
-    self.render
+    width
+  end
+
+  def height_in_pixels
+    height = @height * parent_rectangle.cell_height
+    if height == 0
+      height = parent_rectangle.cell_height
+    end
+    height
   end
 
 end
@@ -377,30 +409,30 @@ end
 def demo
   container_width = 10
   container_height = 10
-  container = Rectangle.new(width:container_width,height:container_height)
+  container = Shinymosaic.new(width:container_width,height:container_height)
   while true
     random_width = (0..container_width).to_a.sample
     random_height = (0..container_height).to_a.sample
-    sub_rectangle = Rectangle.new(width: random_width,height: random_height,content: ('a'..'z').to_a.sample)
+    sub_rectangle = Shinymosaic.new(width: random_width,height: random_height,content: ('a'..'z').to_a.sample)
     if container.insert_rectangle(sub_rectangle)
       container.render
     else
-      container = Rectangle.new(width:container_width,height:container_height)
+      container = Shinymosaic.new(width:container_width,height:container_height)
     end
   end
 end
 
 def setup_test
-  container = Rectangle.new(width:1024,height:513,cell_height:171,cell_width:256)
-  #sub1 = container.build_and_insert_rectangle(width: 1, height: 1, content:'a', size: :small)
-  #sub1 = container.build_and_insert_rectangle(width: 1, height: 1, content:'a', size: :small)
-  #sub1 = container.build_and_insert_rectangle(width: 1, height: 2, content:'A', size: :vertical)
-  #sub2 = container.build_and_insert_rectangle(width: 1, height: 1, content:'B', size: :small)
-  #sub4 = container.build_and_insert_rectangle(width: 2, height: 2, content:'D', size: :large)
-  #sub3 = container.build_and_insert_rectangle(width: 1, height: 2, content:'C', size: :vertical)
-  #sub5 = container.build_and_insert_rectangle(width: 1, height: 1, content:'E', size: :small)
-  #sub6 = container.build_and_insert_rectangle(width: 1, height: 1, content:'F', size: :small)
-  #sub7 = container.build_and_insert_rectangle(width: 1, height: 1, content:'G', size: :small)
+  container = Shinymosaic.new(width:1024,height:513,cell_height:171,cell_width:256)
+  sub1 = container.build_and_insert_rectangle(width: 1, height: 1, content:'a', size: :small)
+  sub1 = container.build_and_insert_rectangle(width: 1, height: 1, content:'a', size: :small)
+  sub1 = container.build_and_insert_rectangle(width: 1, height: 2, content:'A', size: :vertical)
+  sub2 = container.build_and_insert_rectangle(width: 1, height: 1, content:'B', size: :small)
+  sub4 = container.build_and_insert_rectangle(width: 2, height: 2, content:'D', size: :large)
+  sub3 = container.build_and_insert_rectangle(width: 1, height: 2, content:'C', size: :vertical)
+  sub5 = container.build_and_insert_rectangle(width: 1, height: 1, content:'E', size: :small)
+  sub6 = container.build_and_insert_rectangle(width: 1, height: 1, content:'F', size: :small)
+  sub7 = container.build_and_insert_rectangle(width: 1, height: 1, content:'G', size: :small)
   container.render
   #yield container, sub1, [sub1,sub2, sub3, sub4, sub5, sub6, sub7]
   yield container
@@ -489,7 +521,7 @@ end
 def test_mutating
   setup_test do |container|
     container.mutate_layout
-    container.render
+    puts container.render_html
   end
 end
 
@@ -503,4 +535,3 @@ def test_suit
   puts 'all tests ran without problems'
 end
 
-test_mutating
