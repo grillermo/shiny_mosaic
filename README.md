@@ -28,3 +28,7 @@ TODO
 * A Python version?
 * Improve docs, comments, clean up code.
     
+
+License
+-------
+http://creativecommons.org/licenses/by/2.0/
