@@ -32,7 +32,7 @@ class Shinymosaic
     @grid = self.build_grid
     @space_left = calculate_space_left
     while @space_left != 0
-      object = @objects.to_a.sample
+      object = @objects.to_a.shuffle!.pop
       width = object.width
       height = object.height
       content = object.content
@@ -86,8 +86,8 @@ class Shinymosaic
 
     available_height = 0
 
+    ending_row = starting_row + rectangle.height
     # We need the limits with +1 because the coordinates are 0 based and the widths are not
-    ending_row = starting_row + (rectangle.height)
     left_y_corner = right_y_corner - (rectangle.width - 1)
 
     # We asume there is at least one row available because thats where we tested the width
@@ -97,31 +97,41 @@ class Shinymosaic
       return {'x'=>starting_row,'y'=>right_y_corner}
     end
 
+    # Now lets explore the area with a dirty flag
     clean_rows = 0
+    # The x in a coordinate (x,y)
     x = 0
+    # The y in a coordinate (x,y)
     y = 0
+    # moving vertically across the edge of the rectangle
     for row in @grid[starting_row..ending_row] do
-        # we are on the rows that could have enough space
-        y = 0
-        # Flag to determine if this row has enough space
-        row_clean = false
-        for cell in row[left_y_corner..right_y_corner] do
-          # We are on the cell that could have enough space
-          if cell.empty
-            # so this row has as least one cell with content
-            row_clean = true
-          else
-            clean_rows = 0
-            row_clean = false
-          end
-          y += 1
+      y = 0
+      # Flag to determine if this row has enough space
+      # as this is a two step process, first we check horizontally 
+      row_clean = false
+      for cell in row[left_y_corner..right_y_corner] do
+        # and now vertically
+        if cell.empty
+          # so this row has as least one cell with content
+          row_clean = true
+        else
+          # We found another rectangle, reset the clean rows counter
+          clean_rows = 0
+          # And mark it as dirty 
+          row_clean = false
         end
-        if row_clean
-          clean_rows += 1
-        end
-        if clean_rows >= rectangle.height
-          return true
-        end
+        y += 1
+      end
+      # Once we checked all the row
+      if row_clean
+        # we have 1 row less to check
+        clean_rows += 1
+      end
+
+      if clean_rows >= rectangle.height
+        return true
+      end
+
       x += 1
     end
     return false
